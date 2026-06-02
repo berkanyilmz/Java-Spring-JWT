@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
@@ -17,8 +18,9 @@ import io.jsonwebtoken.security.Keys;
 
 @Component
 public class JwtService {
-	
-	private static final String SECRET_KEY = "KBpPOcSJ88uryIFZ9c0NDc3AaWkyz49Yhgzl5uNU8no=";
+
+	@Value("${jwt.secretKey}")
+	private String secretKey;
 
 	public String generateToken(UserDetails userDetails) {
 		Map<String, Object> claimsMap = new HashMap<>();
@@ -46,27 +48,9 @@ public class JwtService {
 
 		return claims;
 	}
-	
-	public <T> T exportToken(String token, Function<Claims, T> claimsFunction) {
-		Claims claims = Jwts.parserBuilder()
-		.setSigningKey(getKey())
-		.build()
-		.parseClaimsJws(token).getBody();
 
-		return claimsFunction.apply(claims);
-	}
-	
-	public String getUserNameByToken(String token) {
-		return exportToken(token, Claims::getSubject);
-	}
-	
-	public boolean isTokenExpired(String token) {
-		Date expiredDate = exportToken(token, Claims::getExpiration);
-		return new Date().before(expiredDate);
-	}
-	
 	public Key getKey() {
-		byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
+		byte[] keyBytes = Decoders.BASE64.decode(secretKey);
 		return Keys.hmacShaKeyFor(keyBytes);
 	}
 	

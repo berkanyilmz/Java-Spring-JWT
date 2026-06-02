@@ -2,20 +2,27 @@ package com.example.config;
 
 import com.example.jwt.AuthEntryPoint;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import com.example.jwt.JwtAuthenticationFilter;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+	@Value("${jwt.secretKey}")
+	private String secretKey;
 	
 	public static final String AUTHENTICATE = "/authenticate";
 	public static final String REGISTER = "/register";
@@ -24,9 +31,6 @@ public class SecurityConfig {
 	
 	@Autowired
 	private AuthenticationProvider authenticationProvider;
-	
-	@Autowired
-	private JwtAuthenticationFilter jwtAuthenticationFilter;
 
 	@Autowired
 	private AuthEntryPoint authEntryPoint;
@@ -44,9 +48,16 @@ public class SecurityConfig {
 				.exceptionHandling(exception -> exception.authenticationEntryPoint(authEntryPoint))
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authenticationProvider(authenticationProvider)
-				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+				.oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
 
 		return httpSecurity.build();
+	}
+
+	@Bean
+	public JwtDecoder jwtDecoder() {
+		byte[] keyBytes = io.jsonwebtoken.io.Decoders.BASE64.decode(this.secretKey);
+		SecretKey spec = new SecretKeySpec(keyBytes, "HmacSHA256");
+		return NimbusJwtDecoder.withSecretKey(spec).build();
 	}
 	
 }
